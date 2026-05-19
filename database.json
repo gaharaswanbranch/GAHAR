@@ -1,0 +1,69 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "ahmed",
+      "password": "8080",
+      "role": "admin",
+      "name": "مدير الموارد البشرية (احمد)",
+      "balances": {
+        "regular": 0,
+        "casual": 0
+      }
+    },
+    {
+      "id": 4,
+      "username": "hoda",
+      "password": "5050",
+      "role": "hr_admin",
+      "name": "مديرة الفرع ",
+      "balances": {
+        "regular": 0,
+        "casual": 0
+      }
+    },
+    {
+      "id": 2,
+      "username": "emp1",
+      "password": "123",
+      "role": "employee",
+      "name": "أحمد محمد",
+      "balances": {
+        "regular": 21,
+        "casual": 7
+      }
+    },
+    {
+      "id": 3,
+      "username": "emp2",
+      "password": "123",
+      "role": "employee",
+      "name": "سارة خالد",
+      "balances": {
+        "regular": 21,
+        "casual": 7
+      }
+    }
+  ],
+  "requests": [
+    {
+      "id": 1,
+      "userId": 2,
+      "employeeName": "أحمد محمد",
+      "type": "regular",
+      "typeName": "إجازة اعتيادية",
+      "start": "2026-06-01",
+      "end": "2026-06-05",
+      "days": 5,
+      "reason": "السفر لقضاء العطلة",
+      "status": "approved",
+      "substituteId": 3,
+      "substituteName": "سارة خالد",
+      "substituteStatus": "approved",
+      "branchStatus": "approved",
+      "hrStatus": "approved",
+      "date": "2026-05-10",
+      "category": "leave"
+    }
+  ]
+}
