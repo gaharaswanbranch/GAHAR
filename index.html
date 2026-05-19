@@ -34,6 +34,11 @@
                     <button type="submit" class="btn btn-primary full-width">
                         <i class="fa-solid fa-right-to-bracket"></i> دخول
                     </button>
+                    <div style="text-align: center; margin-top: 1rem;">
+                        <a href="#" onclick="app.promptLinkCode(event)" style="color: var(--primary-color); font-size: 0.8rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; font-weight: 500;">
+                            <i class="fa-solid fa-link"></i> ربط قاعدة البيانات السحابية للموظفين
+                        </a>
+                    </div>
                 </form>
             </div>
         </section>
@@ -331,6 +336,18 @@
                             <button type="button" id="btn-disconnect-gist" class="btn btn-secondary full-width hidden" onclick="app.disconnectGist()" style="font-size: 0.9rem; border-color: var(--danger-color); color: var(--danger-color); padding: 10px;">
                                 <i class="fa-solid fa-unlink"></i> إلغاء ربط المزامنة
                             </button>
+                        </div>
+                        
+                        <!-- Employee Link Code Section -->
+                        <div id="gist-share-section" class="form-group hidden" style="margin-top: 1.2rem; border-top: 1px solid var(--surface-border); padding-top: 1rem;">
+                            <label>كود ربط الموظفين (شارك هذا الكود مع موظفيك)</label>
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="gist-share-code" readonly style="font-size: 0.8rem; padding: 10px; font-family: monospace; flex-grow: 1; background: rgba(0,0,0,0.3);" placeholder="سيظهر كود المزامنة هنا بعد حفظ الإعدادات">
+                                <button type="button" class="btn btn-secondary" onclick="app.copyShareCode()" style="padding: 10px; font-size: 0.9rem;">
+                                    <i class="fa-solid fa-copy"></i> نسخ
+                                </button>
+                            </div>
+                            <span style="font-size: 0.7rem; color: var(--text-muted);">يقوم الموظف بلصق هذا الكود في شاشة الدخول من جهازه ليتصل فوراً وبشكل تلقائي بقاعدة بياناتك السحابية.</span>
                         </div>
                     </form>
                 </div>

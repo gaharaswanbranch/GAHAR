@@ -61,14 +61,29 @@ let state = {
 // Main App Logic
 const app = {
     async init() {
+        // Try to load database.json from repository first to extract gistId
+        let repoState = null;
+        try {
+            const response = await fetch('database.json');
+            if (response.ok) {
+                repoState = await response.json();
+                if (repoState && repoState.gistId) {
+                    localStorage.setItem('leaveAppGistId', repoState.gistId);
+                }
+            }
+        } catch (err) {
+            console.log('No repository database.json found or failed to load:', err);
+        }
+
         // Load Gist config if exists
-        const gistToken = localStorage.getItem('leaveAppGistToken');
-        const gistId = localStorage.getItem('leaveAppGistId');
+        const gistToken = localStorage.getItem('leaveAppGistToken') || '';
+        const gistId = localStorage.getItem('leaveAppGistId') || '';
         
         let loaded = false;
         
-        if (gistToken && gistId) {
+        if (gistId) {
             try {
+                // Fetch from Gist (token is optional now)
                 const gistState = await this.fetchFromGist(gistToken, gistId);
                 if (gistState && gistState.users && gistState.requests) {
                     state = gistState;
@@ -76,7 +91,7 @@ const app = {
                     console.log('Database loaded from GitHub Gist successfully');
                 }
             } catch (err) {
-                console.error('Failed to load from Gist, falling back to local:', err);
+                console.error('Failed to load from Gist, falling back to local/repo:', err);
             }
         }
         
@@ -89,22 +104,11 @@ const app = {
             }
         }
         
-        if (!loaded) {
-            // Try to load database.json from the repository (fallback for GitHub Pages deployment)
-            try {
-                const response = await fetch('database.json');
-                if (response.ok) {
-                    const repoState = await response.json();
-                    if (repoState && repoState.users && repoState.requests) {
-                        state = repoState;
-                        loaded = true;
-                        this.saveState(); // Cache it locally
-                        console.log('Database loaded from repo database.json successfully');
-                    }
-                }
-            } catch (err) {
-                console.log('No local database.json found or failed to load:', err);
-            }
+        if (!loaded && repoState) {
+            state = repoState;
+            loaded = true;
+            this.saveState(); // Cache it locally
+            console.log('Database loaded from repo database.json successfully');
         }
 
         // Ensure user is logged out initially
@@ -781,11 +785,14 @@ const app = {
 
     // --- GitHub Gist API Helpers ---
     async fetchFromGist(token, gistId) {
+        const headers = {
+            'Accept': 'application/vnd.github.v3+json'
+        };
+        if (token) {
+            headers['Authorization'] = `token ${token}`;
+        }
         const response = await fetch(`https://api.github.com/gists/${gistId}`, {
-            headers: {
-                'Authorization': `token ${token}`,
-                'Accept': 'application/vnd.github.v3+json'
-            }
+            headers: headers
         });
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         const data = await response.json();
@@ -860,19 +867,36 @@ const app = {
         const statusText = document.getElementById('sync-status-text');
         const syncNowBtn = document.getElementById('btn-sync-now');
         const disconnectBtn = document.getElementById('btn-disconnect-gist');
+        const shareSection = document.getElementById('gist-share-section');
+        const shareCodeInput = document.getElementById('gist-share-code');
 
-        if (token && gistId) {
-            badge.innerText = 'متصل سحابياً';
+        if (gistId) {
+            badge.innerText = token ? 'متصل سحابياً (مالك)' : 'متصل سحابياً (موظف)';
             badge.className = 'item-status status-approved';
             statusText.innerText = `متصل بـ GitHub Gist (ID: ${gistId.substring(0, 8)}...)`;
             syncNowBtn.classList.remove('hidden');
             disconnectBtn.classList.remove('hidden');
+            
+            if (token) {
+                // Generate Base64 Settings Code for easy sharing
+                try {
+                    const configObj = { token: token, id: gistId };
+                    const shareCode = btoa(JSON.stringify(configObj));
+                    shareCodeInput.value = shareCode;
+                    shareSection.classList.remove('hidden');
+                } catch (e) {
+                    console.error('Error generating share code:', e);
+                }
+            } else {
+                shareSection.classList.add('hidden');
+            }
         } else {
             badge.innerText = 'محلي';
             badge.className = 'item-status status-pending';
             statusText.innerText = 'محلي (تخزين المتصفح / database.json)';
             syncNowBtn.classList.add('hidden');
             disconnectBtn.classList.add('hidden');
+            shareSection.classList.add('hidden');
         }
     },
 
@@ -922,13 +946,13 @@ const app = {
     },
 
     async syncWithGist() {
-        const token = localStorage.getItem('leaveAppGistToken');
+        const token = localStorage.getItem('leaveAppGistToken') || '';
         const gistId = localStorage.getItem('leaveAppGistId');
-        if (!token || !gistId) return;
+        if (!gistId) return;
 
         const btn = document.getElementById('btn-sync-now');
         const originalContent = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> جاري المزامنة...';
+        btn.innerHTML = '<i class="fa-solid fa-sync fa-spin"></i> جاري المزامنة...';
         btn.disabled = true;
 
         try {
@@ -959,8 +983,10 @@ const app = {
     },
 
     exportDatabase() {
-        // Prepare clean database JSON (exclude active session keys)
+        // Prepare clean database JSON (exclude active session keys, but include gistId if connected)
+        const gistId = localStorage.getItem('leaveAppGistId') || '';
         const cleanState = {
+            gistId: gistId,
             users: state.users,
             requests: state.requests
         };
@@ -985,6 +1011,9 @@ const app = {
                     if (confirm('هل أنت متأكد من استيراد قاعدة البيانات هذه؟ سيتم استبدال جميع البيانات الحالية.')) {
                         state.users = importedData.users;
                         state.requests = importedData.requests;
+                        if (importedData.gistId) {
+                            localStorage.setItem('leaveAppGistId', importedData.gistId);
+                        }
                         this.saveState();
                         
                         // Re-render dashboards
@@ -1010,6 +1039,43 @@ const app = {
             }
         };
         reader.readAsText(file);
+    },
+
+    promptLinkCode(e) {
+        if (e) e.preventDefault();
+        const code = prompt('الرجاء لصق كود ربط قاعدة البيانات السحابية المقدم من المسؤول:');
+        if (!code) return;
+
+        try {
+            const decoded = atob(code.trim());
+            const config = JSON.parse(decoded);
+            if (config.token && config.id) {
+                localStorage.setItem('leaveAppGistToken', config.token);
+                localStorage.setItem('leaveAppGistId', config.id);
+                alert('تم ربط قاعدة البيانات السحابية بنجاح! جاري إعادة تحميل الصفحة لمزامنة البيانات...');
+                window.location.reload();
+            } else {
+                alert('كود الربط غير صالح! يرجى التأكد من نسخه بالكامل.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('فشل قراءة كود الربط: تأكد من نسخ الكود بشكل صحيح بدون فراغات.');
+        }
+    },
+
+    copyShareCode() {
+        const shareInput = document.getElementById('gist-share-code');
+        if (shareInput && shareInput.value) {
+            shareInput.select();
+            shareInput.setSelectionRange(0, 99999); // For mobile devices
+            navigator.clipboard.writeText(shareInput.value)
+                .then(() => {
+                    alert('تم نسخ كود الربط بنجاح! يمكنك الآن مشاركته مع موظفيك عبر واتساب أو أي وسيلة أخرى.');
+                })
+                .catch(err => {
+                    alert('فشل النسخ التلقائي، يمكنك نسخ الكود يدوياً من الحقل.');
+                });
+        }
     }
 };
 
